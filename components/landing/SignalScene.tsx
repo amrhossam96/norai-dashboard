@@ -364,7 +364,10 @@ export function SignalScene() {
           <span className="mt-[3px] font-mono text-[12.5px] text-white">
             sku-71a3
           </span>
-          <span className="mt-[3px] text-[11px] leading-[1.3] text-[#ffd9cf]">
+          <span
+            data-because
+            className="mt-[3px] text-[11px] leading-[1.3] text-[#ffd9cf]"
+          >
             because it follows sku-4c19
           </span>
         </div>

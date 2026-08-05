@@ -13,7 +13,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  *   3 each signal lights
  *   4 the replies gather, the merchant's rules drop into the blend, the answer
  *     forms
- *   5 the return: answer -> blend -> all four, right to left
+ *   5 the reason brightens, then the return travels: answer -> blend -> all
+ *     four, right to left
  *
  * The return does NOT use a negative stroke-dashoffset. SVG 1.1 defines that as
  * an error and some browsers clamp it to 0, rendering the path fully drawn rather
@@ -42,6 +43,7 @@ export function SignalSceneMotion() {
       const rulesBeam = q("[data-beam-rules]");
       const glows = q("[data-glow]");
       const verdict = q("[data-verdict]");
+      const because = q("[data-because]");
       const backSpine = q("[data-beam-back-spine]");
       const back = q("[data-beam-back]");
       const strength = (el: Element) =>
@@ -71,6 +73,10 @@ export function SignalSceneMotion() {
 
       tl.set(glows, { opacity: 0 })
         .set(verdict, { opacity: 0.3 })
+        // Dimmed, never hidden. Set here rather than in CSS so that with JS
+        // unavailable or reduced-motion active the reason stays fully readable —
+        // a diagram has to be correct when it is frozen.
+        .set(because, { opacity: 0.45 })
 
         .to(ask, { ...draw, duration: 0.45, ease: "power2.inOut" })
         .to(out, { ...draw, duration: 0.55, ease: "power2.out" })
@@ -93,7 +99,9 @@ export function SignalSceneMotion() {
         // 20% slower over the fan AND missing power2's initial kick, so it read
         // slower still than the numbers suggest.
         // answer -> blend  (mirrors the blend -> answer leg)
-        .to(backSpine, { ...draw, duration: 0.3 })
+        // The answer does the citing, so it speaks first and the beam follows.
+        .to(because, { opacity: 1, duration: 0.3 })
+        .to(backSpine, { ...draw, duration: 0.3 }, "-=0.15")
         // blend -> all four at once  (mirrors the four -> blend leg)
         .to(back, {
           strokeDashoffset: 0,
@@ -104,7 +112,8 @@ export function SignalSceneMotion() {
         })
         .to(glows, { opacity: 0, duration: 0.5 }, "+=0.15")
         .to([backSpine, back], { opacity: 0, duration: 0.5 }, "<")
-        .to(verdict, { opacity: 0.3, duration: 0.5 }, "<");
+        .to(verdict, { opacity: 0.3, duration: 0.5 }, "<")
+        .to(because, { opacity: 0.45, duration: 0.5 }, "<");
 
       ScrollTrigger.create({
         trigger: scene,
