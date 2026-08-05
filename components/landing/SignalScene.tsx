@@ -215,7 +215,6 @@ export function SignalScene() {
             stroke={ASK}
             strokeWidth={2}
             strokeLinecap="round"
-            pathLength={1}
           />
           {SIGNALS.map((s, i) => (
             <path
@@ -225,7 +224,6 @@ export function SignalScene() {
               stroke={ASK}
               strokeWidth={s.weight}
               strokeLinecap="round"
-              pathLength={1}
             />
           ))}
           {SIGNALS.map((s, i) => (
@@ -236,7 +234,6 @@ export function SignalScene() {
               stroke={ASK}
               strokeWidth={s.weight}
               strokeLinecap="round"
-              pathLength={1}
             />
           ))}
           {/* ---- the return: same wires, reversed geometry, drawn forwards ---- */}
@@ -246,7 +243,6 @@ export function SignalScene() {
             stroke={BACK}
             strokeWidth={3}
             strokeLinecap="round"
-            pathLength={1}
           />
           {SIGNALS.map((s) => (
             <path
@@ -257,7 +253,6 @@ export function SignalScene() {
               stroke={BACK}
               strokeWidth={s.credit}
               strokeLinecap="round"
-              pathLength={1}
             />
           ))}
 
@@ -267,7 +262,6 @@ export function SignalScene() {
             stroke={ASK}
             strokeWidth={2.5}
             strokeLinecap="round"
-            pathLength={1}
           />
 
         </svg>

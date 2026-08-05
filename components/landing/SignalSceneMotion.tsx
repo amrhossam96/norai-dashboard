@@ -20,9 +20,9 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  * left-to-right. Instead SignalScene emits reversed path geometry and this draws
  * it forwards, so direction is a property of the data, not of dash arithmetic.
  *
- * Two further guards: pathLength={1} makes dash values a fraction of each path
- * (no unit mismatch), and no vectorEffect appears on these paths (it resolves
- * dasharray in screen space while lengths are in user units).
+ * Dash lengths come from getTotalLength(), which is only correct because these
+ * paths carry no vectorEffect: non-scaling-stroke resolves dasharray in screen
+ * space while lengths are reported in user units, so beams stopped short.
  */
 export function SignalSceneMotion() {
   useEffect(() => {
@@ -46,14 +46,21 @@ export function SignalSceneMotion() {
         Number((el as HTMLElement).dataset.strength ?? 1);
       if (ask.length === 0) return; // stacked layout: no stage to run
 
-      // Every path carries pathLength={1}, so dash values are a FRACTION of the
-      // path. No getTotalLength(), and therefore no user-units-vs-screen-units
-      // mismatch — which is what made beams stop short of their endpoints.
+      // Dash values come from each path's real length in user units.
+      //
+      // NOT pathLength={1}: browsers are unreliable about applying pathLength
+      // scaling to stroke-dasharray, and when it is ignored `1` means one user
+      // unit — roughly 75 tiny dashes across a 150-unit path, which appears fully
+      // drawn instantly instead of flowing.
+      //
+      // getTotalLength() is safe here precisely because these paths carry no
+      // vectorEffect: without non-scaling-stroke, dasharray is measured in the
+      // same user units the length is reported in. The viewBox is fixed, so the
+      // value never needs recomputing on resize.
       const arm = (paths: Element[]) =>
-        gsap.set(paths, {
-          strokeDasharray: 1,
-          strokeDashoffset: 1,
-          opacity: 0,
+        paths.forEach((el) => {
+          const L = (el as unknown as SVGPathElement).getTotalLength();
+          gsap.set(el, { strokeDasharray: L, strokeDashoffset: L, opacity: 0 });
         });
       arm([...ask, ...out, ...join, ...verdictBeam, ...backSpine, ...back]);
 
