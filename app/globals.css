@@ -76,6 +76,18 @@ body {
   margin: 0;
 }
 
+/* In-page anchors (#waitlist, #docs, #system ...) ease instead of jumping.
+   Gated on prefers-reduced-motion: a long smooth scroll is a common vestibular
+   trigger, and the instant jump is the correct fallback rather than a downgrade.
+   Each target carries its own scrollMarginTop so the fixed nav does not cover
+   it — deliberately NOT scroll-padding-top here, which would stack with those
+   and overshoot by double. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 body {
   background: var(--color-canvas);
   color: var(--color-ink);

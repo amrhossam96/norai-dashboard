@@ -22,8 +22,12 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  // data-scroll-behavior: Next 16 no longer suppresses `scroll-behavior: smooth`
+  // during route changes. Without it, navigating to another route would also
+  // smooth-scroll to the top, which reads as a stuck page. This opts back into
+  // the old override so only in-page anchors ease.
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
