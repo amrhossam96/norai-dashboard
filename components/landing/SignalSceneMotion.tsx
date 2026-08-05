@@ -80,17 +80,21 @@ export function SignalSceneMotion() {
         // ---- the return: right to left, on reversed geometry ----
         // Forward beams go to exactly 0: the return shares their curves, and any
         // residual orange underneath tints the cream and fuzzes the edges.
-        .to([ask, out, join, verdictBeam], { opacity: 0, duration: 0.4 }, "+=0.5")
+        .to([ask, out, join, verdictBeam], { opacity: 0, duration: 0.4 }, "+=0.35")
         .to(glows, { opacity: 0.1, duration: 0.4 }, "<")
-        // answer -> blend
-        .to(backSpine, { ...draw, duration: 0.22, ease: "none" })
-        // blend -> all four at once; width and brightness carry the credit
+        // The return mirrors the forward legs exactly — same durations, same
+        // eases. It previously ran 0.22s/0.75s on a linear ease, which was both
+        // 20% slower over the fan AND missing power2's initial kick, so it read
+        // slower still than the numbers suggest.
+        // answer -> blend  (mirrors the blend -> answer leg)
+        .to(backSpine, { ...draw, duration: 0.3 })
+        // blend -> all four at once  (mirrors the four -> blend leg)
         .to(back, {
           strokeDashoffset: 0,
           opacity: (_i: number, target: Element) =>
             0.24 + 0.76 * strength(target),
-          duration: 0.75,
-          ease: "none",
+          duration: 0.6,
+          ease: "power2.inOut",
         })
         .to(glows, { opacity: 0, duration: 0.5 }, "+=0.15")
         .to([backSpine, back], { opacity: 0, duration: 0.5 }, "<")
