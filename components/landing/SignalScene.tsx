@@ -36,7 +36,7 @@ const SIG_H = 78;
 const BLEND = onSpine(716, 104, 52);
 /** The merchant's own box. Centred on BLEND and dropping into it, because rules
  *  adjust how the signals are combined rather than adding a signal of their own. */
-const RULES = rect(703, 76, 130, 46);
+const RULES = rect(703, 66, 130, 60);
 const ANSWER = onSpine(852, 138, 78);
 
 interface Signal {
@@ -348,8 +348,11 @@ export function SignalScene() {
           style={place(RULES)}
         >
           <span className="font-mono text-[8.5px] text-[#ffb59f]">YOUR RULES</span>
-          <span className="font-mono text-[9.5px] text-[#b4b4b4]">
-            boost · exclude · pin · cap
+          <span className="mt-[2px] font-mono text-[9.5px] leading-[1.35] text-[#b4b4b4]">
+            boost · exclude
+          </span>
+          <span className="font-mono text-[9.5px] leading-[1.35] text-[#b4b4b4]">
+            pin · cap
           </span>
         </div>
 
