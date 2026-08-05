@@ -36,7 +36,7 @@ const SIG_H = 78;
 const BLEND = onSpine(716, 104, 52);
 /** The merchant's own box. Centred on BLEND and dropping into it, because rules
  *  adjust how the signals are combined rather than adding a signal of their own. */
-const RULES = rect(703, 56, 130, 46);
+const RULES = rect(703, 76, 130, 46);
 const ANSWER = onSpine(852, 138, 78);
 
 interface Signal {
@@ -268,7 +268,7 @@ export function SignalScene() {
             d={vLine(bottomOf(RULES), topOf(BLEND))}
             stroke={ASK}
             strokeWidth={2}
-            strokeLinecap="round"
+            strokeLinecap="butt"
           />
 
           <path

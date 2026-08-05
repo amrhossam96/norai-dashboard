@@ -77,9 +77,9 @@ export function SignalSceneMotion() {
         .to(glows, { opacity: 1, duration: 0.35, ease: "power2.out" }, "-=0.15")
         .to(join, { ...draw, duration: 0.6, ease: "power2.inOut" }, "-=0.1")
         // The replies have landed, so the merchant's rules drop in on top of
-        // them. Held to the same 257 u/s as every other beam — it is a 66-unit
-        // path, so it takes 0.26s rather than sharing a duration and crawling.
-        .to(rulesBeam, { ...draw, duration: 0.26, ease: "power2.out" })
+        // them. Held to the same 257 u/s as every other beam — a 46-unit path,
+        // so 0.18s rather than sharing a duration and appearing to crawl.
+        .to(rulesBeam, { ...draw, duration: 0.18, ease: "power2.out" })
         .to(verdictBeam, { ...draw, duration: 0.3 }, "-=0.05")
         .to(verdict, { opacity: 1, duration: 0.35, ease: "power3.out" }, "-=0.1")
 
