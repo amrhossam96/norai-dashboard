@@ -19,8 +19,22 @@ export interface JsonTheme {
   italicKeys?: boolean;
 }
 
-/** Palettes taken from each theme's published colour set. */
+/**
+ * Palettes taken from each theme's published colour set.
+ *
+ * `vscode` is the default. Its string colour (#ce9178) sits in the same warm
+ * family as this site's accent (#ff7a5c / #ff9d84 / #ffd9cf), so the block reads
+ * as part of the page. Dracula and Tokyo Night are cool, high-saturation palettes
+ * — cyan, purple, pink — which fight a warm near-black page.
+ */
 export const JSON_THEMES = {
+  vscode: {
+    punct: "#d4d4d4",
+    key: "#9cdcfe",
+    string: "#ce9178",
+    number: "#b5cea8",
+    literal: "#569cd6",
+  },
   dracula: {
     punct: "#f8f8f2",
     key: "#8be9fd",
@@ -102,7 +116,7 @@ function tokenize(src: string): Token[] {
 
 export function JsonCode({
   source,
-  theme = "dracula",
+  theme = "vscode",
 }: {
   source: string;
   theme?: JsonThemeName;
