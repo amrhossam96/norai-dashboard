@@ -348,11 +348,11 @@ export function SignalScene() {
           style={place(RULES)}
         >
           <span className="font-mono text-[8.5px] text-[#ffb59f]">YOUR RULES</span>
-          <span className="mt-[2px] font-mono text-[9.5px] leading-[1.35] text-[#b4b4b4]">
-            boost · exclude
-          </span>
-          <span className="font-mono text-[9.5px] leading-[1.35] text-[#b4b4b4]">
-            pin · cap
+          <span className="mt-[3px] grid grid-cols-2 gap-x-[10px] font-mono text-[9.5px] leading-[1.4] text-[#b4b4b4]">
+            <span>boost</span>
+            <span>exclude</span>
+            <span>pin</span>
+            <span>cap</span>
           </span>
         </div>
 
