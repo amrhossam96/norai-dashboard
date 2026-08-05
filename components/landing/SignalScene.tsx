@@ -24,6 +24,8 @@ const onSpine = (x: number, w: number, h: number) =>
 
 const leftOf = (r: Rect) => [r.x, r.y + r.h / 2] as const;
 const rightOf = (r: Rect) => [r.x + r.w, r.y + r.h / 2] as const;
+const topOf = (r: Rect) => [r.x + r.w / 2, r.y] as const;
+const bottomOf = (r: Rect) => [r.x + r.w / 2, r.y + r.h] as const;
 
 // ---- the set ----------------------------------------------------------------
 const VISITOR = onSpine(10, 96, 34);
@@ -32,6 +34,9 @@ const SIG_X = 300;
 const SIG_W = 356;
 const SIG_H = 78;
 const BLEND = onSpine(716, 104, 52);
+/** The merchant's own box. Centred on BLEND and dropping into it, because rules
+ *  adjust how the signals are combined rather than adding a signal of their own. */
+const RULES = rect(703, 56, 130, 46);
 const ANSWER = onSpine(852, 138, 78);
 
 interface Signal {
@@ -86,6 +91,7 @@ const sigRect = (s: Signal) => rect(SIG_X, s.cy - SIG_H / 2, SIG_W, SIG_H);
 // ---- beams ------------------------------------------------------------------
 type Pt = readonly [number, number];
 const hLine = (a: Pt, b: Pt) => `M${a[0]},${a[1]} H${b[0]}`;
+const vLine = (a: Pt, b: Pt) => `M${a[0]},${a[1]} V${b[1]}`;
 
 /**
  * Symmetric S. Both control points sit at half the horizontal run, so the curve
@@ -206,6 +212,7 @@ export function SignalScene() {
             {SIGNALS.map((s, i) => (
               <path key={`w2-${s.engine}`} d={replyPath(s)} />
             ))}
+            <path d={vLine(bottomOf(RULES), topOf(BLEND))} />
             <path d={hLine(rightOf(BLEND), leftOf(ANSWER))} />
           </g>
 
@@ -255,6 +262,14 @@ export function SignalScene() {
               strokeLinecap="round"
             />
           ))}
+
+          <path
+            data-beam-rules
+            d={vLine(bottomOf(RULES), topOf(BLEND))}
+            stroke={ASK}
+            strokeWidth={2}
+            strokeLinecap="round"
+          />
 
           <path
             data-beam-verdict
@@ -329,6 +344,16 @@ export function SignalScene() {
         </div>
 
         <div
+          className="nr-actor nr-rules absolute flex flex-col justify-center px-[11px]"
+          style={place(RULES)}
+        >
+          <span className="font-mono text-[8.5px] text-[#ffb59f]">YOUR RULES</span>
+          <span className="font-mono text-[9.5px] text-[#b4b4b4]">
+            boost · exclude · pin · cap
+          </span>
+        </div>
+
+        <div
           data-verdict
           className="nr-verdict absolute flex flex-col justify-center rounded-[11px] border px-[14px]"
           style={place(ANSWER)}
@@ -371,6 +396,12 @@ export function SignalScene() {
             </div>
           </div>
         ))}
+        <div className="nr-rules rounded-[10px] border px-[13px] py-[11px]">
+          <div className="font-mono text-[9px] text-[#ffb59f]">YOUR RULES</div>
+          <div className="mt-[3px] font-mono text-[10px] text-[#b4b4b4]">
+            boost · exclude · pin · cap
+          </div>
+        </div>
         <div className="nr-verdict rounded-[11px] border px-[13px] py-[12px]">
           <div className="font-mono text-[9px] font-medium tracking-[0.13em] text-[#ff7a5c]">
             THE ANSWER

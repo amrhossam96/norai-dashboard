@@ -335,6 +335,13 @@ body {
   border-color: rgba(255, 122, 92, 0.28);
 }
 
+/* The one box on the stage that belongs to the customer, so it is marked out
+ * rather than blending in with the engine's own components. */
+.nr-rules {
+  border-color: rgba(255, 181, 159, 0.42);
+  background: rgba(255, 122, 92, 0.07);
+}
+
 
 /* A signal. Translucent so beams and the page bloom read behind the glass. */
 /* A signal card. Translucent so the beams read behind the glass. */

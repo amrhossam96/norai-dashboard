@@ -11,7 +11,8 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  *   2 all four are asked at the same instant — no stagger, because they are
  *     queried in parallel; a stagger would read as a relay
  *   3 each signal lights
- *   4 the replies gather and the answer forms
+ *   4 the replies gather, the merchant's rules drop into the blend, the answer
+ *     forms
  *   5 the return: answer -> blend -> all four, right to left
  *
  * The return does NOT use a negative stroke-dashoffset. SVG 1.1 defines that as
@@ -38,6 +39,7 @@ export function SignalSceneMotion() {
       const out = q("[data-beam-out]");
       const join = q("[data-beam-join]");
       const verdictBeam = q("[data-beam-verdict]");
+      const rulesBeam = q("[data-beam-rules]");
       const glows = q("[data-glow]");
       const verdict = q("[data-verdict]");
       const backSpine = q("[data-beam-back-spine]");
@@ -62,7 +64,7 @@ export function SignalSceneMotion() {
           const L = (el as unknown as SVGPathElement).getTotalLength();
           gsap.set(el, { strokeDasharray: L, strokeDashoffset: L, opacity: 0 });
         });
-      arm([...ask, ...out, ...join, ...verdictBeam, ...backSpine, ...back]);
+      arm([...ask, ...out, ...join, ...rulesBeam, ...verdictBeam, ...backSpine, ...back]);
 
       const draw = { strokeDashoffset: 0, opacity: 1 };
       const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.9 });
@@ -74,13 +76,17 @@ export function SignalSceneMotion() {
         .to(out, { ...draw, duration: 0.55, ease: "power2.out" })
         .to(glows, { opacity: 1, duration: 0.35, ease: "power2.out" }, "-=0.15")
         .to(join, { ...draw, duration: 0.6, ease: "power2.inOut" }, "-=0.1")
-        .to(verdictBeam, { ...draw, duration: 0.3 }, "-=0.1")
+        // The replies have landed, so the merchant's rules drop in on top of
+        // them. Held to the same 257 u/s as every other beam — it is a 66-unit
+        // path, so it takes 0.26s rather than sharing a duration and crawling.
+        .to(rulesBeam, { ...draw, duration: 0.26, ease: "power2.out" })
+        .to(verdictBeam, { ...draw, duration: 0.3 }, "-=0.05")
         .to(verdict, { opacity: 1, duration: 0.35, ease: "power3.out" }, "-=0.1")
 
         // ---- the return: right to left, on reversed geometry ----
         // Forward beams go to exactly 0: the return shares their curves, and any
         // residual orange underneath tints the cream and fuzzes the edges.
-        .to([ask, out, join, verdictBeam], { opacity: 0, duration: 0.4 }, "+=0.35")
+        .to([ask, out, join, rulesBeam, verdictBeam], { opacity: 0, duration: 0.4 }, "+=0.35")
         .to(glows, { opacity: 0.1, duration: 0.4 }, "<")
         // The return mirrors the forward legs exactly — same durations, same
         // eases. It previously ran 0.22s/0.75s on a linear ease, which was both
