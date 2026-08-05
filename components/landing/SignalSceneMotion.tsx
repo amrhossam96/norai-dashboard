@@ -12,17 +12,17 @@ import { ScrollTrigger } from "gsap/ScrollTrigger";
  *     queried in parallel; a stagger would read as a relay
  *   3 each signal lights
  *   4 the replies gather and the answer forms
- *   5 hold, clear, repeat
+ *   5 the return: answer -> blend -> all four, right to left
  *
- * There is no return pass. Reverse-drawing a path needs a negative
- * stroke-dashoffset, which SVG 1.1 treats as an error and browsers handle
- * inconsistently, so the citation could never be relied on to travel right to
- * left. The reason line simply stays on the answer card instead.
+ * The return does NOT use a negative stroke-dashoffset. SVG 1.1 defines that as
+ * an error and some browsers clamp it to 0, rendering the path fully drawn rather
+ * than reversed — which is why an earlier attempt looked like it was drawn
+ * left-to-right. Instead SignalScene emits reversed path geometry and this draws
+ * it forwards, so direction is a property of the data, not of dash arithmetic.
  *
- * Note there is no `vectorEffect="non-scaling-stroke"` on these paths: it makes
- * stroke-dasharray resolve in screen space while getTotalLength() returns user
- * units, so every drawn beam stopped short of its endpoint by the stage's scale
- * factor.
+ * Two further guards: pathLength={1} makes dash values a fraction of each path
+ * (no unit mismatch), and no vectorEffect appears on these paths (it resolves
+ * dasharray in screen space while lengths are in user units).
  */
 export function SignalSceneMotion() {
   useEffect(() => {
@@ -40,20 +40,22 @@ export function SignalSceneMotion() {
       const verdictBeam = q("[data-beam-verdict]");
       const glows = q("[data-glow]");
       const verdict = q("[data-verdict]");
+      const backSpine = q("[data-beam-back-spine]");
+      const back = q("[data-beam-back]");
+      const strength = (el: Element) =>
+        Number((el as HTMLElement).dataset.strength ?? 1);
       if (ask.length === 0) return; // stacked layout: no stage to run
 
-      const len = (el: Element) =>
-        (el as unknown as SVGPathElement).getTotalLength();
-
-      // Hidden, ready to draw from the start. Set at runtime only, so with JS
-      // unavailable nothing is left stranded invisible.
-      for (const p of [...ask, ...out, ...join, ...verdictBeam]) {
-        gsap.set(p, {
-          strokeDasharray: len(p),
-          strokeDashoffset: len(p),
+      // Every path carries pathLength={1}, so dash values are a FRACTION of the
+      // path. No getTotalLength(), and therefore no user-units-vs-screen-units
+      // mismatch — which is what made beams stop short of their endpoints.
+      const arm = (paths: Element[]) =>
+        gsap.set(paths, {
+          strokeDasharray: 1,
+          strokeDashoffset: 1,
           opacity: 0,
         });
-      }
+      arm([...ask, ...out, ...join, ...verdictBeam, ...backSpine, ...back]);
 
       const draw = { strokeDashoffset: 0, opacity: 1 };
       const tl = gsap.timeline({ repeat: -1, repeatDelay: 0.9 });
@@ -68,10 +70,24 @@ export function SignalSceneMotion() {
         .to(verdictBeam, { ...draw, duration: 0.3 }, "-=0.1")
         .to(verdict, { opacity: 1, duration: 0.35, ease: "power3.out" }, "-=0.1")
 
-        .to({}, { duration: 1.6 })
-        .to([ask, out, join, verdictBeam], { opacity: 0, duration: 0.55 })
-        .to(glows, { opacity: 0, duration: 0.55 }, "<")
-        .to(verdict, { opacity: 0.3, duration: 0.55 }, "<");
+        // ---- the return: right to left, on reversed geometry ----
+        // Forward beams go to exactly 0: the return shares their curves, and any
+        // residual orange underneath tints the cream and fuzzes the edges.
+        .to([ask, out, join, verdictBeam], { opacity: 0, duration: 0.4 }, "+=0.5")
+        .to(glows, { opacity: 0.1, duration: 0.4 }, "<")
+        // answer -> blend
+        .to(backSpine, { ...draw, duration: 0.22, ease: "none" })
+        // blend -> all four at once; width and brightness carry the credit
+        .to(back, {
+          strokeDashoffset: 0,
+          opacity: (_i: number, target: Element) =>
+            0.24 + 0.76 * strength(target),
+          duration: 0.75,
+          ease: "none",
+        })
+        .to(glows, { opacity: 0, duration: 0.5 }, "+=0.15")
+        .to([backSpine, back], { opacity: 0, duration: 0.5 }, "<")
+        .to(verdict, { opacity: 0.3, duration: 0.5 }, "<");
 
       ScrollTrigger.create({
         trigger: scene,

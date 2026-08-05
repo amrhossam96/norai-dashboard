@@ -41,12 +41,15 @@ interface Signal {
   cy: number;
   /** Meter bars and beam width: how strongly this signal answered. */
   weight: 1 | 2 | 3;
+  /** How much it moved the answer — return-beam width and brightness. */
+  credit: number;
 }
 
 const SIGNALS: Signal[] = [
   {
     label: "What they keep choosing",
     engine: "affinity",
+    credit: 2,
     evidence: "recency-weighted",
     cy: 59,
     weight: 2,
@@ -54,6 +57,7 @@ const SIGNALS: Signal[] = [
   {
     label: "What pairs with what",
     engine: "similarity",
+    credit: 1.2,
     evidence: "1,240 bought both",
     cy: 149,
     weight: 1,
@@ -61,6 +65,7 @@ const SIGNALS: Signal[] = [
   {
     label: "What follows what",
     engine: "transitions",
+    credit: 4.5,
     evidence: "3 of 4 baskets",
     cy: 239,
     weight: 3,
@@ -68,12 +73,14 @@ const SIGNALS: Signal[] = [
   {
     label: "What is in demand",
     engine: "popularity",
+    credit: 0.9,
     evidence: "covers a new visitor",
     cy: 329,
     weight: 1,
   },
 ];
 
+const MAX_CREDIT = Math.max(...SIGNALS.map((s) => s.credit));
 const sigRect = (s: Signal) => rect(SIG_X, s.cy - SIG_H / 2, SIG_W, SIG_H);
 
 // ---- beams ------------------------------------------------------------------
@@ -95,6 +102,33 @@ const fan = (a: Pt, b: Pt) => {
 const askPath = (s: Signal) => fan(rightOf(CALL), leftOf(sigRect(s)));
 const replyPath = (s: Signal) => fan(rightOf(sigRect(s)), leftOf(BLEND));
 
+/**
+ * The exact geometric reverse of a path this file emits.
+ *
+ * Reverse-drawing via a negative stroke-dashoffset is not portable: SVG 1.1
+ * defines a negative offset as an error and some browsers clamp it to 0, which
+ * renders the path fully drawn instead of reversed. So the return leg gets its
+ * own path that genuinely runs right-to-left and is drawn FORWARDS.
+ *
+ *   M p0 C p1 p2 p3   ->   M p3 C p2 p1 p0
+ *   M a,y  H bx       ->   M bx,y H a
+ */
+const reversePath = (d: string): string => {
+  const cubic = d.match(
+    /^M([\d.-]+),([\d.-]+) C([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+) ([\d.-]+),([\d.-]+)$/,
+  );
+  if (cubic) {
+    const [, x0, y0, x1, y1, x2, y2, x3, y3] = cubic;
+    return `M${x3},${y3} C${x2},${y2} ${x1},${y1} ${x0},${y0}`;
+  }
+  const horiz = d.match(/^M([\d.-]+),([\d.-]+) H([\d.-]+)$/);
+  if (horiz) {
+    const [, x0, y0, x1] = horiz;
+    return `M${x1},${y0} H${x0}`;
+  }
+  throw new Error(`reversePath: unsupported path "${d}"`);
+};
+
 const pct = (n: number, total: number) => `${(n / total) * 100}%`;
 const place = (r: Rect) => ({
   left: pct(r.x, VB.w),
@@ -104,6 +138,7 @@ const place = (r: Rect) => ({
 });
 
 const ASK = "#ff7a5c";
+const BACK = "#ffd9cf";
 
 function Meter({ weight }: { weight: Signal["weight"] }) {
   return (
@@ -180,6 +215,7 @@ export function SignalScene() {
             stroke={ASK}
             strokeWidth={2}
             strokeLinecap="round"
+            pathLength={1}
           />
           {SIGNALS.map((s, i) => (
             <path
@@ -189,6 +225,7 @@ export function SignalScene() {
               stroke={ASK}
               strokeWidth={s.weight}
               strokeLinecap="round"
+              pathLength={1}
             />
           ))}
           {SIGNALS.map((s, i) => (
@@ -199,14 +236,38 @@ export function SignalScene() {
               stroke={ASK}
               strokeWidth={s.weight}
               strokeLinecap="round"
+              pathLength={1}
             />
           ))}
+          {/* ---- the return: same wires, reversed geometry, drawn forwards ---- */}
+          <path
+            data-beam-back-spine
+            d={reversePath(hLine(rightOf(BLEND), leftOf(ANSWER)))}
+            stroke={BACK}
+            strokeWidth={3}
+            strokeLinecap="round"
+            pathLength={1}
+          />
+          {SIGNALS.map((s) => (
+            <path
+              key={`back-${s.engine}`}
+              data-beam-back
+              data-strength={(s.credit / MAX_CREDIT).toFixed(3)}
+              d={reversePath(replyPath(s))}
+              stroke={BACK}
+              strokeWidth={s.credit}
+              strokeLinecap="round"
+              pathLength={1}
+            />
+          ))}
+
           <path
             data-beam-verdict
             d={hLine(rightOf(BLEND), leftOf(ANSWER))}
             stroke={ASK}
             strokeWidth={2.5}
             strokeLinecap="round"
+            pathLength={1}
           />
 
         </svg>
