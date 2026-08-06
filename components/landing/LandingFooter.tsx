@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { NoraiMark } from "@/components/NoraiMark";
 
 interface Col {
@@ -19,6 +20,9 @@ const COLS: Col[] = [
     links: [
       { label: "Waitlist", href: "#waitlist" },
       { label: "FAQ", href: "#faq" },
+      // A real route, unlike the anchors above it. Kept last so it does not
+      // compete with the waitlist while the product is still invite-only.
+      { label: "Sign in", href: "/login" },
     ],
   },
   // No LEGAL column until the documents exist. Privacy, Terms and a DPA were
@@ -47,15 +51,21 @@ export function LandingFooter() {
             <div className="font-mono text-[9px] font-medium tracking-[0.13em] text-[#6e6e6e]">
               {col.title}
             </div>
-            {col.links.map((l) => (
-              <a
-                key={l.label}
-                href={l.href}
-                className="text-[12.5px] text-[#a8a8a8] transition-colors hover:text-white"
-              >
-                {l.label}
-              </a>
-            ))}
+            {col.links.map((l) => {
+              const style =
+                "text-[12.5px] text-[#a8a8a8] transition-colors hover:text-white";
+              // Same-page anchors stay plain <a>; real routes go through Link so
+              // they navigate client-side instead of reloading the document.
+              return l.href.startsWith("/") ? (
+                <Link key={l.label} href={l.href} className={style}>
+                  {l.label}
+                </Link>
+              ) : (
+                <a key={l.label} href={l.href} className={style}>
+                  {l.label}
+                </a>
+              );
+            })}
           </div>
         ))}
       </div>

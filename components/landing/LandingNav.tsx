@@ -45,13 +45,18 @@ export function LandingNav() {
           ))}
         </nav>
 
+        {/* Sign in is a quiet text link, not a second button: the product is
+            still invite-only, so the waitlist stays the one primary action.
+            It replaces the old "Talk to us", which promised a conversation and
+            scrolled to an email field. Sign-up is reachable from /login rather
+            than competing with the waitlist here. */}
         <div className="ml-auto flex items-center gap-[12px]">
-          <a
-            href="#waitlist"
-            className="hidden text-[13px] font-medium text-[#b4b4b4] transition-colors hover:text-white sm:inline"
+          <Link
+            href="/login"
+            className="text-[13px] font-medium text-[#b4b4b4] transition-colors hover:text-white"
           >
-            Talk to us
-          </a>
+            Sign in
+          </Link>
           <a
             href="#waitlist"
             className="cta cta-accent cta-sm"
