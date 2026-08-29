@@ -134,6 +134,16 @@ export interface EventCategory {
   name: string;
   weight: number;
   polarity: "positive" | "negative";
+
+  // What the category means downstream. The flags are not independent —
+  // polarity 'negative' wins over counts_as_engagement — so `role` is the
+  // resolved answer and the one to read.
+  counts_as_engagement: boolean;
+  forms_sequence: boolean;
+  breaks_sequence: boolean;
+  is_conversion: boolean;
+  role: "negative" | "conversion" | "engagement" | "ignored";
+
   description?: string;
   created_at: string;
   updated_at: string;

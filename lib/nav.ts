@@ -28,7 +28,7 @@ export const navSections: NavSection[] = [
     title: "Inspect",
     items: [
       { label: "Users & identity", href: "/app/users" },
-      { label: "Event stream", href: "/app/events", badge: "live" },
+      { label: "Event types", href: "/app/events" },
       { label: "Diagnostics", href: "/app/diagnostics" },
     ],
   },

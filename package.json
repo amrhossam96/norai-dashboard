@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check:suggest": "tsx lib/eventTypes/suggest.check.ts"
   },
   "dependencies": {
     "gsap": "^3.15.0",
