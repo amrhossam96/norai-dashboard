@@ -29,7 +29,7 @@ export const navSections: NavSection[] = [
     items: [
       { label: "Users & identity", href: "/app/users" },
       { label: "Event stream", href: "/app/events", badge: "live" },
-      { label: "Engines", href: "/app/engines" },
+      { label: "Diagnostics", href: "/app/diagnostics" },
     ],
   },
   {

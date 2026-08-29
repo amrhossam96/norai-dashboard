@@ -140,6 +140,6 @@ export const mockLiveResults: LiveResultsModel = {
   ],
 };
 
-/* Deliberately no lift/holdout mock lives here: the backend has no experiment
- * framework, so there is nothing for it to become. Reinstate it alongside the
- * real measurement engine, not before. */
+/* No lift/holdout mock, because the real thing exists: arms are assigned
+ * deterministically and compared with a two-proportion z-test. Read
+ * GET /tuning/decisions rather than inventing numbers here. */

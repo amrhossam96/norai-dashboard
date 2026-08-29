@@ -1,0 +1,672 @@
+/* ------------------------------------------------------------------ *
+ * Onboarding wizard.
+ *
+ * This screen is the one deliberate exception to the dashboard's flat
+ * idiom. Everywhere else, gradients and blur read as pasted on; here the
+ * whole surface is a lit ramp the answers float over, and the panels are
+ * glass rather than bordered cards. The rule that does NOT bend: red is
+ * still the only hue on screen.
+ *
+ * Every class is `ob-`-prefixed. globals.css already owns `.chip`,
+ * `.eyebrow` and `.cta`, and this file must not reach into the product.
+ * ------------------------------------------------------------------ */
+
+.ob {
+  --ob-serif: "Instrument Serif", Georgia, serif;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+/* ---- ramps: warm only, so red stays the one hue ---- */
+.ob-ramp {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, opacity;
+}
+.ob-ramp-1 {
+  width: 120vw;
+  height: 90vh;
+  left: -10vw;
+  top: -42vh;
+  filter: blur(90px);
+  background: radial-gradient(closest-side, rgba(236, 48, 19, 0.4), transparent 72%);
+}
+.ob-ramp-2 {
+  width: 80vw;
+  height: 70vh;
+  left: -24vw;
+  top: 52vh;
+  filter: blur(96px);
+  background: radial-gradient(closest-side, rgba(255, 110, 60, 0.2), transparent 74%);
+}
+.ob-ramp-3 {
+  width: 64vw;
+  height: 60vh;
+  left: 60vw;
+  top: 36vh;
+  filter: blur(104px);
+  background: radial-gradient(closest-side, rgba(236, 48, 19, 0.16), transparent 76%);
+}
+
+/* A bare fill with no track reads as a stray dash in the corner rather than as
+   progress. The track is what makes the fill mean something. */
+.ob-track,
+.ob-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  z-index: 5;
+}
+.ob-track {
+  right: 0;
+  background: rgba(255, 255, 255, 0.055);
+}
+.ob-bar {
+  width: 0;
+  background: var(--color-red);
+  box-shadow: 0 0 12px rgba(236, 48, 19, 0.55);
+}
+
+.ob-wrap {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- chrome ---- */
+.ob-top {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 26px 34px;
+}
+.ob-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14.5px;
+  letter-spacing: -0.02em;
+}
+.ob-brand-mark {
+  width: 23px;
+  height: 23px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: var(--color-red);
+}
+.ob-count {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--color-grey-80);
+}
+.ob-count b {
+  color: var(--color-ink-3);
+  font-weight: 400;
+}
+
+.ob-stage {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  padding: 12px 34px;
+  position: relative;
+  overflow: hidden;
+}
+/* The deck is the belt. Panels stack inside it so an outgoing screen and an
+   incoming one are on screen at the same moment, travelling together. */
+.ob-deck {
+  position: relative;
+  width: min(920px, 100%);
+  height: 100%;
+}
+.ob-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+  will-change: transform, opacity;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px 0;
+  scrollbar-width: thin;
+}
+/* Auto margins, not justify-content:center. Centring a flex container pushes
+   overflow out of the TOP, where scrolling cannot reach it — the heading ends
+   up under the header with no way to get at it. Auto margins centre when there
+   is room and yield to scrolling when there is not. */
+.ob-panel > *:first-child {
+  margin-top: auto;
+}
+.ob-panel > *:last-child {
+  margin-bottom: auto;
+}
+/* A step carrying a list is taller than one carrying a question. Shrink the
+   hero rather than clipping it against the header. */
+.ob-panel-dense .ob-h1 {
+  font-size: clamp(25px, 3.4vw, 38px);
+}
+.ob-panel-dense .ob-lede {
+  font-size: 14px;
+  margin-top: 14px;
+}
+.ob-panel-dense .ob-answers {
+  margin-top: 26px;
+}
+
+.ob-eyebrow {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  font-size: 9.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--color-red-ink);
+  margin-bottom: 26px;
+}
+.ob-h1 {
+  font-size: clamp(34px, 6.2vw, 72px);
+  font-weight: 600;
+  line-height: 1.03;
+  letter-spacing: -0.038em;
+  margin: 0;
+  text-wrap: balance;
+}
+.ob-h1 i {
+  font-style: italic;
+  font-weight: 500;
+}
+.ob-lede {
+  font-size: clamp(14.5px, 1.45vw, 17.5px);
+  line-height: 1.6;
+  color: var(--color-ink-3);
+  margin: 22px 0 0;
+  max-width: 56ch;
+}
+.ob-answers {
+  margin-top: 46px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+}
+
+/* ---- answers ---- */
+.ob-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 11px;
+  justify-content: center;
+}
+.ob-opt {
+  position: relative;
+  font-family: inherit;
+  color: var(--color-ink);
+  cursor: pointer;
+  text-align: left;
+  border: 0;
+  border-radius: 12px;
+  padding: 19px 22px;
+  min-width: 180px;
+  overflow: hidden;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.022));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  will-change: transform;
+}
+.ob-opt::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  background: linear-gradient(158deg, rgba(236, 48, 19, 0.34), rgba(236, 48, 19, 0.05));
+  opacity: 0;
+  transition: opacity 0.4s cubic-bezier(0.19, 0.9, 0.22, 1);
+}
+.ob-opt[aria-pressed="true"]::after {
+  opacity: 1;
+}
+.ob-opt > * {
+  position: relative;
+  z-index: 1;
+}
+.ob-opt-t {
+  font-size: 17.5px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+.ob-opt-s {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--color-grey-80);
+  transition: color 0.35s;
+}
+.ob-opt[aria-pressed="true"] .ob-opt-s {
+  color: #ffb9a6;
+}
+.ob-opt:focus-visible,
+.ob-chip:focus-visible {
+  outline: 2px solid var(--color-red-ink);
+  outline-offset: 4px;
+}
+
+.ob-chip {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: #4e4e4e;
+  cursor: pointer;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 19px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  will-change: transform;
+  transition: color 0.3s, background 0.3s;
+}
+.ob-chip[aria-pressed="true"] {
+  color: var(--color-ink);
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.13), rgba(255, 255, 255, 0.04));
+}
+/* The dot carries the tier: monochrome, plus red for rejection. */
+.ob-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3a3a3a;
+  transition: all 0.35s;
+}
+.ob-chip[aria-pressed="true"] .ob-dot-engage {
+  background: #8a8a8a;
+}
+.ob-chip[aria-pressed="true"] .ob-dot-convert {
+  background: #f2f2f2;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+.ob-chip[aria-pressed="true"] .ob-dot-reject {
+  background: var(--color-red);
+  box-shadow: 0 0 12px rgba(236, 48, 19, 0.9);
+}
+.ob-legend {
+  display: flex;
+  gap: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-grey-80);
+  margin-top: 8px;
+}
+.ob-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ob-legend i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.ob-quiet {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  color: var(--color-grey-80);
+  margin-top: 12px;
+}
+
+/* ---- the typed name ---- */
+.ob-namewrap {
+  position: relative;
+  width: min(660px, 100%);
+  display: grid;
+  place-items: center;
+  padding: 28px 0;
+}
+.ob-namewrap::before {
+  content: "";
+  position: absolute;
+  inset: -46% -6%;
+  pointer-events: none;
+  background: radial-gradient(52% 66% at 50% 50%, rgba(236, 48, 19, 0.32), transparent 72%);
+  filter: blur(50px);
+  opacity: 0;
+  transition: opacity 0.8s cubic-bezier(0.19, 0.9, 0.22, 1);
+}
+.ob-namewrap:focus-within::before {
+  opacity: 1;
+}
+.ob-rule {
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+}
+.ob-rule i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-red), transparent);
+  opacity: 0;
+  transition: opacity 0.5s;
+}
+.ob-namewrap:focus-within .ob-rule i {
+  opacity: 1;
+}
+.ob-name {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--ob-serif);
+  font-style: italic;
+  font-size: clamp(34px, 5.4vw, 62px);
+  line-height: 1.14;
+  text-align: center;
+  color: #fff;
+  caret-color: transparent;
+  padding: 6px 10px;
+}
+.ob-name::placeholder {
+  color: rgba(255, 255, 255, 0.18);
+}
+/* Native carets are 1px and blink on a hard square wave. This one is 3px,
+   rounded, and breathes on a sine — it reads as part of the type rather than
+   as an OS artefact.
+   top/left are pinned: without them an absolutely-positioned child of a centred
+   grid resolves to its STATIC position, and gsap's x/y then translate from
+   there instead of from the wrapper's origin — the caret lands a half-width
+   away from the text. */
+.ob-caret {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--color-red);
+  pointer-events: none;
+  box-shadow: 0 0 14px rgba(236, 48, 19, 0.8);
+  opacity: 0;
+}
+.ob-mirror {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  white-space: pre;
+  pointer-events: none;
+  font-family: var(--ob-serif);
+  font-style: italic;
+  font-size: clamp(34px, 5.4vw, 62px);
+  line-height: 1.14;
+}
+.ob-error {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  color: var(--color-red-ink);
+}
+
+/* ---- the snippet ---- */
+.ob-code {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 2.05;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.014));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  padding: 20px 24px;
+  margin: 0;
+  color: var(--color-ink-3);
+  white-space: pre;
+  overflow-x: auto;
+  text-align: left;
+  width: min(660px, 100%);
+}
+.ob-code-k {
+  color: var(--color-red-ink);
+}
+.ob-code-s {
+  color: var(--color-ink-2);
+}
+.ob-code-c {
+  color: var(--color-grey-80);
+}
+.ob-keyrow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(660px, 100%);
+  border-radius: 12px;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  padding: 15px 20px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.ob-keyrow-l {
+  color: var(--color-grey-80);
+  flex: none;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-size: 9.5px;
+}
+.ob-keyrow-v {
+  flex: 1;
+  color: var(--color-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+/* The key is not there yet. A shimmer says "still coming"; an empty box says
+   "broken", and a spinner would claim more precision than we have. */
+.ob-keyrow-pending {
+  color: var(--color-grey-80);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.16) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: ob-shimmer 1.4s linear infinite;
+  border-radius: 5px;
+}
+@keyframes ob-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.ob-mini {
+  border: 0;
+  border-radius: 7px;
+  padding: 7px 14px;
+  font-size: 11px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  color: var(--color-ink-3);
+  background: rgba(255, 255, 255, 0.07);
+  transition: all 0.25s;
+}
+.ob-mini:hover:not(:disabled) {
+  color: #fff;
+  background: var(--color-red);
+}
+.ob-mini:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ---- the listening pulse ---- */
+.ob-pulse {
+  height: 130px;
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.ob-pulse-core {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--color-red);
+  z-index: 2;
+  box-shadow: 0 0 36px rgba(236, 48, 19, 0.95);
+}
+.ob-pulse-ring {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(236, 48, 19, 0.55), transparent 66%);
+}
+.ob-evt {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--color-ink-3);
+  min-height: 18px;
+}
+.ob-evt b {
+  color: var(--color-red-ink);
+  font-weight: 400;
+}
+
+/* ---- summary ---- */
+.ob-sum {
+  width: min(600px, 100%);
+  border-radius: 12px;
+  overflow: hidden;
+  background: linear-gradient(158deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.02));
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+.ob-sum-row {
+  display: flex;
+  gap: 16px;
+  padding: 15px 20px;
+  font-size: 13.5px;
+  text-align: left;
+}
+.ob-sum-row + .ob-sum-row {
+  box-shadow: 0 -1px 0 rgba(255, 255, 255, 0.05);
+}
+.ob-sum-l {
+  color: var(--color-grey-80);
+  width: 136px;
+  flex: none;
+  font-size: 12.5px;
+}
+.ob-sum-r {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-ink);
+}
+.ob-warn {
+  width: min(600px, 100%);
+  border-radius: 12px;
+  padding: 14px 18px;
+  text-align: left;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #ffb9a6;
+  background: var(--color-why-bg);
+}
+.ob-warn ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+/* ---- foot ---- */
+.ob-foot {
+  flex: none;
+  padding: 22px 34px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.ob-foot-right {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+.ob-btn {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 13px 24px;
+  border-radius: 9px;
+  cursor: pointer;
+  border: 0;
+  transition: background-color 0.18s ease, color 0.18s ease, opacity 0.18s ease;
+}
+.ob-btn-go {
+  color: #fff;
+  background: var(--color-red);
+}
+.ob-btn-go:hover:not(:disabled) {
+  background: #ff4a28;
+}
+.ob-btn-go:disabled {
+  background: rgba(255, 255, 255, 0.06);
+  color: #4e4e4e;
+  cursor: not-allowed;
+}
+.ob-btn-quiet {
+  background: none;
+  color: var(--color-grey-80);
+}
+.ob-btn-quiet:hover {
+  color: var(--color-ink);
+}
+.ob-hint {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--color-grey-80);
+}
+.ob-word {
+  display: inline-block;
+  will-change: transform, opacity;
+}
+
+/* Reduced motion: the belt still changes screens, it just does not travel, and
+   the ambient ramps hold still. Nothing here is ever left at opacity 0 — every
+   start state is set by GSAP at runtime, so with motion off the markup is
+   simply visible. */
+@media (prefers-reduced-motion: reduce) {
+  .ob-keyrow-pending {
+    animation: none;
+  }
+}

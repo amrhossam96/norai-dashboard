@@ -33,13 +33,26 @@ export const AUTH_ACTIVATION_INVALID =
 
 /**
  * Backend limits, mirrored so the browser can reject obvious failures without a
- * round-trip. Source: cmd/api/modules/auth/auth.go — register uses
- * `max=52` on email and `min=3,max=72` on password; login allows a longer
- * email (`max=255`). The tighter register limit is used here so a value that
- * passes sign-up cannot fail sign-in.
+ * round-trip. Source: cmd/api/modules/auth/auth.go —
+ *
+ *   register  first_name/last_name max=52, email max=255, password min=12 max=72
+ *   login     email max=255, password max=128
+ *
+ * Where the two disagree, the tighter one is mirrored, so a value that passes
+ * sign-up can never fail sign-in.
+ *
+ * These have to be kept honest by hand, and drifting from them is worse than
+ * having no check at all: the form accepts a value, the API rejects it, and the
+ * only thing the user is told is that some field is wrong. If you change a rule
+ * in the Go handler, change it here in the same commit.
  */
-export const EMAIL_MAX = 52;
-export const PASSWORD_MIN = 3;
+export const EMAIL_MAX = 255;
+/**
+ * Twelve, not three. bcrypt cannot rescue a three-character password, and the
+ * Go handler stopped accepting them — mirroring the old value here meant the
+ * form invited a password the API would refuse.
+ */
+export const PASSWORD_MIN = 12;
 export const PASSWORD_MAX = 72;
 export const NAME_MAX = 52;
 

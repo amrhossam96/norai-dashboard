@@ -34,7 +34,7 @@ export class NoraiApiError extends Error {
   }
 }
 
-interface RequestOptions extends Omit<RequestInit, "body"> {
+export interface RequestOptions extends Omit<RequestInit, "body"> {
   /** JWT for dashboard routes, or leave undefined for public/api-key routes. */
   token?: string;
   /** x-norai-api-key for the ingest/serving routes. */

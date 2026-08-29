@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { navSections } from "@/lib/nav";
 import { mockEnvironment } from "@/lib/mock/pipeline";
 import { NoraiMark } from "@/components/NoraiMark";
+import { UserMenu } from "@/components/shell/UserMenu";
+import type { CurrentUser } from "@/lib/api/types";
 
 function Logo() {
   return (
@@ -42,20 +44,7 @@ function EnvSwitcher() {
   );
 }
 
-function UserFooter() {
-  return (
-    <div className="flex items-center gap-[9px] border-t border-line px-4 py-[12px]">
-      <div className="h-[24px] w-[24px] rounded-full bg-line-2" />
-      <div className="flex-1">
-        <div className="font-sans text-[12px] font-semibold text-ink">Amr H.</div>
-        <div className="font-mono text-[9.5px] text-grey-60">owner</div>
-      </div>
-      <span className="font-mono text-[11px] text-grey-65">⌄</span>
-    </div>
-  );
-}
-
-export function Sidebar() {
+export function Sidebar({ user }: { user: CurrentUser | null }) {
   const pathname = usePathname();
 
   return (
@@ -109,7 +98,7 @@ export function Sidebar() {
         ))}
       </nav>
 
-      <UserFooter />
+      <UserMenu user={user} />
     </aside>
   );
 }

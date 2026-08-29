@@ -27,6 +27,28 @@ export interface LoginResponse {
   token: string; // 7-day HS256 JWT; expiry embedded in the token only
 }
 
+// ---- The signed-in user ----
+
+/**
+ * GET /v1/users/me — the caller's own record.
+ *
+ * The only way the dashboard can name who is signed in: the JWT lives in an
+ * httpOnly cookie so no script can decode it, and every other endpoint answers
+ * about teams, projects or environments rather than about the person. `password`
+ * is `json:"-"` on the Go model and never appears here.
+ */
+export interface CurrentUser {
+  id: string;
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  avatar_url?: string;
+  provider?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 // ---- Tenancy ----
 export type Role = "owner" | "admin" | "member" | "viewer";
 
@@ -53,6 +75,21 @@ export interface Project {
   status: "active" | "suspended" | "archived";
   created_at: string;
   updated_at: string;
+}
+
+/**
+ * POST /v1/projects/
+ *
+ * Creating a project also creates its default "Production" environment, in the
+ * same transaction — see projects.EnvironmentProvisioner in the backend. So
+ * this one call is the whole of onboarding; there is no second step to make an
+ * environment, and callers can assume one exists afterwards.
+ */
+export interface CreateProjectRequest {
+  name: string;
+  slug: string;
+  description: string;
+  team_id: string;
 }
 
 export interface Environment {
@@ -85,13 +122,100 @@ export interface RecommendResponse {
   items: RecItem[];
 }
 
+// ---- Event taxonomy ----
+
+/**
+ * One of the nine rows the backend seeds into event_categories. The category is
+ * what carries the weight and polarity an event contributes to a preference
+ * score — the event *name* is just a label the customer chose.
+ */
+export interface EventCategory {
+  id: string;
+  name: string;
+  weight: number;
+  polarity: "positive" | "negative";
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EventType {
+  id: string;
+  environment_id: string;
+  event_name: string;
+  event_category_id?: string;
+  entity_type: string;
+  status: string;
+  description?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateEventTypeRequest {
+  event_name: string;
+  event_category_id: string;
+  entity_type: string;
+  description?: string;
+}
+
+/**
+ * A stored event, as returned by GET /v1/environments/{id}/events.
+ *
+ * Only the fields the dashboard reads are typed. The row carries a good deal
+ * more (signals, attribution, SDK provenance) that no screen shows yet.
+ */
+export interface Event {
+  id: string;
+  event_type: string;
+  event_category?: string;
+  entity_type?: string;
+  environment_id: string;
+  anonymous_id: string;
+  session_id?: string;
+  interaction_strength?: number;
+  created_at: string;
+}
+
+// ---- Engine tuning ----
+
+/**
+ * GET /v1/environments/{id}/entity-config/{entityType}.
+ *
+ * entity_type_config is an override table, not the definition: it is empty
+ * until someone disagrees with the engine. The endpoint answers with what the
+ * engine will actually use and says which of the two it is, so `source:
+ * "default"` is the normal, healthy answer rather than a missing value.
+ */
+export interface EntityTypeConfig {
+  entity_type: string;
+  decay_half_life_d: number;
+  saturation_k: number;
+  source: "default" | "override";
+}
+
 // ---- Surfaces ----
+
+export type SurfaceEngine =
+  | "preference"
+  | "similarity"
+  | "transitions"
+  | "trending"
+  | "pipeline";
+
+export interface CreateSurfaceRequest {
+  name: string;
+  slug: string;
+  engine: SurfaceEngine;
+  entity_type: string;
+  description?: string;
+}
+
 export interface Surface {
   id: string;
   environment_id: string;
   name: string;
   slug: string;
-  engine: "preference" | "similarity" | "transitions" | "trending";
+  engine: SurfaceEngine;
   entity_type: string;
   description?: string;
   rules: Record<string, unknown>;
@@ -110,6 +234,22 @@ export interface ProjectAPIKey {
   created_at: string;
   last_used_at?: string;
   revoked_at?: string;
+}
+
+export interface CreateAPIKeyRequest {
+  name: string;
+  class?: "publishable" | "secret";
+}
+
+/**
+ * The response to POST /api-keys. `apiKey` is plaintext and is the only moment
+ * it is ever readable — the backend stores a hash and every later read returns
+ * ProjectAPIKey, which has no key on it.
+ */
+export interface CreatedAPIKey {
+  id: string;
+  class: "publishable" | "secret";
+  apiKey: string;
 }
 
 // ---- Waitlist ----
@@ -137,4 +277,19 @@ export interface ReadyResponse {
     nats: "ok" | "error";
     clickhouse: "ok" | "error" | "disabled";
   };
+}
+
+// ---- Diagnostics: GET /v1/environments/{environmentId}/diagnostics ----
+export interface DiagnosticCheck {
+  name: string;
+  ok: boolean;
+  detail: string;
+  fix?: string;
+}
+
+export interface EnvironmentHealth {
+  environment_id: string;
+  ready: boolean;
+  blocker?: DiagnosticCheck;
+  checks: DiagnosticCheck[];
 }
