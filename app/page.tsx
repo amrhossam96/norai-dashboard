@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { SITE_DESCRIPTION } from "@/lib/brand";
 import { LandingNav } from "@/components/landing/LandingNav";
 import { Hero } from "@/components/landing/Hero";
 import { BuiltFor } from "@/components/landing/BuiltFor";
@@ -12,10 +13,24 @@ import { LandingMotion } from "@/components/landing/LandingMotion";
 import { CursorLight } from "@/components/landing/CursorLight";
 import { SignalSceneMotion } from "@/components/landing/SignalSceneMotion";
 
+const TITLE = "norai — recommendations that explain themselves";
+
 export const metadata: Metadata = {
-  title: "norai — recommendations that explain themselves",
-  description:
-    "Personalization that works on a brand-new visitor, runs on one API call, and tells you why it picked every item. No ML team, no six-month build, no black box.",
+  title: TITLE,
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: TITLE,
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  // Page-level `twitter` replaces the root object wholesale, so the card
+  // type has to be restated here or it silently downgrades to "summary".
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function LandingPage() {

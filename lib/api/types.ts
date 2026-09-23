@@ -1,305 +1,168 @@
 /**
- * TypeScript contracts mirroring the norai Go backend (all routes under /v1).
- *
- * Source of truth: a code-level audit of github.com/amrhossam96/norai-backend.
- * Every successful JSON body from the backend is wrapped in `{ "data": ... }`;
- * the types below describe the shape *inside* `data`. Errors are `{ "error": string }`.
- *
- * These exist so the mock data layer and the real fetch client share one set of
- * types — swapping mock → live is a single seam (see lib/api/client.ts).
+ * Wire shapes of the norai gateway (api/openapi.yaml in the norai repo) and
+ * of the dashboard's own control plane over the same Postgres. Nothing here is
+ * invented: every gateway type mirrors a `components.schemas` entry.
  */
 
-// ---- Envelope ----
-export interface ApiEnvelope<T> {
-  data: T;
-}
-export interface ApiError {
-  error: string;
-  details?: { field: string; message: string }[];
+// ---- Gateway: recommendations ----
+
+export type Reason =
+  | "similar_to_viewed"
+  | "bought_together"
+  | "similar_to_recent"
+  | "popular_in_segment"
+  | "new_arrival"
+  | "pinned"
+  | "exploration"
+  | "bought_before";
+
+export interface RecommendationItem {
+  item_id: string;
+  position: number;
+  score: number;
+  reasons: Reason[];
 }
 
-// ---- Auth ----
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-export interface LoginResponse {
-  token: string; // 7-day HS256 JWT; expiry embedded in the token only
-}
-
-// ---- The signed-in user ----
-
-/**
- * GET /v1/users/me — the caller's own record.
- *
- * The only way the dashboard can name who is signed in: the JWT lives in an
- * httpOnly cookie so no script can decode it, and every other endpoint answers
- * about teams, projects or environments rather than about the person. `password`
- * is `json:"-"` on the Go model and never appears here.
- */
-export interface CurrentUser {
-  id: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  avatar_url?: string;
-  provider?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+export interface RecommendResponse {
+  recommendation_id: string;
+  surface: string;
+  variant: Record<string, unknown>;
+  model_versions: Record<string, string>;
+  items: RecommendationItem[];
+  page_token?: string | null;
+  ttl_seconds: number;
 }
 
-// ---- Tenancy ----
-export type Role = "owner" | "admin" | "member" | "viewer";
+export interface RecommendRequest {
+  surface: string;
+  user_id?: string;
+  anonymous_id?: string;
+  k?: number;
+  context?: Record<string, unknown>;
+  filters?: Record<string, unknown>;
+  basket?: string[];
+  exclude?: string[];
+}
 
-export interface Team {
-  id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
+export interface ExplainAttribution {
+  shown: "seen" | "not_seen" | "unknown";
+  impression_ts?: string | null;
+  label_build_ts?: string | null;
+  labels?: Record<string, { label: number; label_kind: string; label_ts?: string | null }>;
 }
-export interface TeamWithRole extends Team {
-  user_role: Role;
+
+export interface ExplainItem {
+  item_id: string;
+  sources: Record<string, unknown>[];
+  applied_rules: Record<string, unknown>[];
+  attribution?: ExplainAttribution;
 }
+
+export interface ExplainResponse {
+  recommendation_id: string;
+  surface: string;
+  fallback_level: string;
+  items: ExplainItem[];
+}
+
+export interface ConfigVersionResponse {
+  version: string;
+}
+
+// ---- Control plane (Postgres) ----
+
+export type ConfigKind = "schema" | "taxonomy" | "surfaces" | "rules";
+export const CONFIG_KINDS: ConfigKind[] = ["schema", "taxonomy", "surfaces", "rules"];
 
 export interface Project {
-  id: string;
-  team_id: string;
-  owner_id: string;
-  name: string;
-  slug: string;
-  description: string;
-  status: "active" | "suspended" | "archived";
-  created_at: string;
-  updated_at: string;
-}
-
-/**
- * POST /v1/projects/
- *
- * Creating a project also creates its default "Production" environment, in the
- * same transaction — see projects.EnvironmentProvisioner in the backend. So
- * this one call is the whole of onboarding; there is no second step to make an
- * environment, and callers can assume one exists afterwards.
- */
-export interface CreateProjectRequest {
-  name: string;
-  slug: string;
-  description: string;
-  team_id: string;
-}
-
-export interface Environment {
-  id: string;
   project_id: string;
   name: string;
-  slug: string;
-  kind: "production" | "staging" | "development" | "custom";
-  description: string;
-  archived_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// ---- Recommendations (the Glassbox contract) ----
-export interface RecReason {
-  source: string; // "similarity" | "transitions" | "affinity" | "popularity" | ...
-  detail: string; // the human sentence — "the why"
-  seed_id?: string;
-}
-export interface RecItem {
-  entity_id: string;
-  entity_type: string;
-  score: number;
-  confidence: number;
-  reasons: RecReason[];
-}
-export interface RecommendResponse {
-  entity_type: string;
-  items: RecItem[];
-}
-
-// ---- Event taxonomy ----
-
-/**
- * One of the nine rows the backend seeds into event_categories. The category is
- * what carries the weight and polarity an event contributes to a preference
- * score — the event *name* is just a label the customer chose.
- */
-export interface EventCategory {
-  id: string;
-  name: string;
-  weight: number;
-  polarity: "positive" | "negative";
-
-  // What the category means downstream. The flags are not independent —
-  // polarity 'negative' wins over counts_as_engagement — so `role` is the
-  // resolved answer and the one to read.
-  counts_as_engagement: boolean;
-  forms_sequence: boolean;
-  breaks_sequence: boolean;
-  is_conversion: boolean;
-  role: "negative" | "conversion" | "engagement" | "ignored";
-
-  description?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface EventType {
-  id: string;
-  environment_id: string;
-  event_name: string;
-  event_category_id?: string;
-  entity_type: string;
+  region: string;
   status: string;
-  description?: string;
   created_at: string;
-  updated_at: string;
+  /** The signed-in user's role on it. */
+  role: "owner" | "admin" | "member";
 }
 
-export interface CreateEventTypeRequest {
-  event_name: string;
-  event_category_id: string;
-  entity_type: string;
-  description?: string;
-}
-
-/**
- * A stored event, as returned by GET /v1/environments/{id}/events.
- *
- * Only the fields the dashboard reads are typed. The row carries a good deal
- * more (signals, attribution, SDK provenance) that no screen shows yet.
- */
-export interface Event {
-  id: string;
-  event_type: string;
-  event_category?: string;
-  entity_type?: string;
-  environment_id: string;
-  anonymous_id: string;
-  session_id?: string;
-  interaction_strength?: number;
+export interface ConfigVersion {
+  config_type: ConfigKind;
+  version: string;
+  payload: Record<string, unknown>;
   created_at: string;
 }
 
-// ---- Engine tuning ----
-
-/**
- * GET /v1/environments/{id}/entity-config/{entityType}.
- *
- * entity_type_config is an override table, not the definition: it is empty
- * until someone disagrees with the engine. The endpoint answers with what the
- * engine will actually use and says which of the two it is, so `source:
- * "default"` is the normal, healthy answer rather than a missing value.
- */
-export interface EntityTypeConfig {
-  entity_type: string;
-  decay_half_life_d: number;
-  saturation_k: number;
-  source: "default" | "override";
-}
-
-// ---- Surfaces ----
-
-export type SurfaceEngine =
-  | "preference"
-  | "similarity"
-  | "transitions"
-  | "trending"
-  | "pipeline";
-
-export interface CreateSurfaceRequest {
-  name: string;
-  slug: string;
-  engine: SurfaceEngine;
-  entity_type: string;
-  description?: string;
-}
-
-export interface Surface {
-  id: string;
-  environment_id: string;
-  name: string;
-  slug: string;
-  engine: SurfaceEngine;
-  entity_type: string;
-  description?: string;
-  rules: Record<string, unknown>;
-  archived_at?: string;
-  created_at: string;
-  updated_at: string;
-}
-
-// ---- API keys ----
-export interface ProjectAPIKey {
-  id: string;
-  environment_id: string;
-  name: string;
-  status: string;
-  created_by: string;
-  created_at: string;
-  last_used_at?: string;
-  revoked_at?: string;
-}
-
-export interface CreateAPIKeyRequest {
-  name: string;
-  class?: "publishable" | "secret";
-}
-
-/**
- * The response to POST /api-keys. `apiKey` is plaintext and is the only moment
- * it is ever readable — the backend stores a hash and every later read returns
- * ProjectAPIKey, which has no key on it.
- */
-export interface CreatedAPIKey {
-  id: string;
-  class: "publishable" | "secret";
-  apiKey: string;
-}
-
-// ---- Waitlist ----
-/**
- * POST /v1/waitlist/ is the one public, unauthenticated endpoint the marketing
- * site uses. The backend reads bodies with DisallowUnknownFields, so `email` is
- * the only key it will accept — adding a name or company field here is a 400
- * until the backend grows the column.
- */
-export interface WaitlistSignupRequest {
-  email: string;
-}
-
-/** GET /v1/waitlist/ — JWT-only (do not call from the public site). */
-export interface WaitlistEntry {
-  email: string;
-  created_at: string;
-}
-
-// ---- Health ----
-export interface ReadyResponse {
-  status: "ready" | "not_ready";
-  checks: {
-    postgres: "ok" | "error";
-    nats: "ok" | "error";
-    clickhouse: "ok" | "error" | "disabled";
+export interface SurfaceRow {
+  surface_name: string;
+  config_version: string;
+  payload: {
+    name: string;
+    retrieval: string[];
+    objective: Record<string, number>;
+    constraints?: Record<string, unknown>;
+    holdout_share: number;
+    exploration: { slots_per_page: number; positions?: number[] };
+    readiness?: Record<string, unknown>;
   };
+  rules_version?: string | null;
+  rules?: { rules: Record<string, unknown>[] } | null;
 }
 
-// ---- Diagnostics: GET /v1/environments/{environmentId}/diagnostics ----
-export interface DiagnosticCheck {
+export interface ApiKeyRow {
+  key_id: string;
+  /** `nk_sec_abcdefgh…` — prefix only; the plaintext is shown once at creation. */
+  display: string;
+  key_type: "publishable" | "secret";
+  created_at: string;
+  revoked_at: string | null;
+  grace_until: string | null;
+}
+
+export interface CreatedApiKey extends ApiKeyRow {
+  key: string;
+}
+
+export interface CatalogItem {
+  item_id: string;
+  updated_at: string;
+  first_seen_at: string;
+  available: boolean;
+  fields: Record<string, unknown>;
+}
+
+export interface Member {
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: Project["role"];
+  created_at: string;
+}
+
+export interface AuditRow {
+  audit_id: string;
+  actor: string;
+  action: string;
+  resource: string;
+  created_at: string;
+}
+
+export interface ReadinessCheck {
   name: string;
   ok: boolean;
   detail: string;
   fix?: string;
+  href?: string;
 }
 
-export interface EnvironmentHealth {
-  environment_id: string;
+export interface Readiness {
   ready: boolean;
-  blocker?: DiagnosticCheck;
-  checks: DiagnosticCheck[];
+  checks: ReadinessCheck[];
+  blocker?: ReadinessCheck;
+}
+
+/** What the shell needs to draw the account chip. */
+export interface CurrentUser {
+  email: string;
+  first_name?: string;
+  last_name?: string;
 }

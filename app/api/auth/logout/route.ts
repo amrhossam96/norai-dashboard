@@ -1,30 +1,19 @@
 /**
- * Sign-out. Clears the session cookie.
- *
- * POST clears the session and returns; the client then navigates away. GET lives
- * for server redirects: when /app hits a 401 it redirects here so the invalid
- * cookie is destroyed before the user is sent back to the login screen —
- * otherwise the login page (which only checks the cookie is present) bounces
- * straight back to /app forever.
- *
- * The JWT itself stays valid until it expires — the Go API is stateless and has
- * no revocation list. Clearing the cookie is enough for the browser, but a token
- * already copied out elsewhere would keep working. Real revocation needs backend
- * support (a denylist or short-lived tokens plus refresh).
+ * Sign-out: deletes the session row (real revocation) and clears the cookies.
+ * GET exists for server-side redirects: a page that finds the cookie stale
+ * sends the browser here so the cookie is destroyed before it lands on /login.
  */
 import { redirect } from "next/navigation";
 import { destroySession } from "@/lib/session";
 
-async function clear() {
-  await destroySession();
-}
-
 export async function POST() {
-  await clear();
+  await destroySession();
   return Response.json({ status: "success", message: "" }, { status: 200 });
 }
 
-export async function GET() {
-  await clear();
-  redirect("/login");
+export async function GET(req: Request) {
+  await destroySession();
+  const next = new URL(req.url).searchParams.get("next");
+  const safe = next && next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+  redirect(`/login?next=${encodeURIComponent(safe)}`);
 }

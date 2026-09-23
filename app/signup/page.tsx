@@ -16,7 +16,7 @@ export default async function SignupPage() {
   return (
     <AuthShell
       title="Create an account"
-      subtitle="We'll email you an activation link before you can sign in."
+      subtitle="You'll be signed in and creating your first project in a minute."
       footer={
         <>
           Already have an account?{" "}

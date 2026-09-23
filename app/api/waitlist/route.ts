@@ -1,14 +1,9 @@
 /**
- * Waitlist signup proxy.
- *
- * Sits in front of the Go API's public POST /v1/waitlist/ so that the browser
- * never needs the backend address (no prod origin has to be added to the
- * backend's CORS_ALLOWED_ORIGINS, which 403s unknown origins outright) and so
- * there is one server-side place to drop obvious bot traffic — that endpoint is
- * public and has no rate limiting of its own yet.
+ * Waitlist signup. Stored in the dashboard's own table (dashboard.waitlist):
+ * the norai backend has no notion of prospects. The honeypot drops obvious
+ * bot traffic before the database is touched.
  */
-import { apiFetch, NoraiApiError } from "@/lib/api/client";
-import type { WaitlistSignupRequest } from "@/lib/api/types";
+import { query } from "@/lib/db/pg";
 import {
   checkWaitlistEmail,
   WAITLIST_FAILURE_MESSAGE,
@@ -44,27 +39,13 @@ export async function POST(req: Request) {
     return reply({ status: "error", message: check.message }, 400);
   }
 
-  const body: WaitlistSignupRequest = { email: check.email };
-
   try {
-    // 201 Created, body `{"data": null}`.
-    await apiFetch<null>("/waitlist/", { method: "POST", body });
+    // ON CONFLICT DO NOTHING: a duplicate is reported as success, so this
+    // endpoint never confirms whether an address is already on the list.
+    await query("INSERT INTO dashboard.waitlist (email) VALUES ($1) ON CONFLICT DO NOTHING", [check.email]);
     return ok();
   } catch (err) {
-    if (err instanceof NoraiApiError) {
-      // 409 means this email is already stored. Report it as success: the user's
-      // intent is satisfied, and a distinct message would confirm to anyone who
-      // asks whether a given address is on the list.
-      if (err.status === 409) return ok();
-      if (err.status === 400) {
-        return reply(
-          { status: "error", message: WAITLIST_INVALID_MESSAGE },
-          400,
-        );
-      }
-    }
-
-    console.error("[waitlist] signup failed", err);
+    console.error("[waitlist] insert failed", err);
     return reply({ status: "error", message: WAITLIST_FAILURE_MESSAGE }, 502);
   }
 }

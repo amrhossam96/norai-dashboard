@@ -1,18 +1,18 @@
-import { StubPage } from "@/components/StubPage";
+import { requireProject } from "@/lib/current";
+import { listSurfaces } from "@/lib/control/config";
+import { PageHeader } from "@/components/ui/PageHeader";
+import { Playground } from "@/components/playground/Playground";
 
-export default function PlaygroundPage() {
+export default async function PlaygroundPage() {
+  const { project } = await requireProject("/app/playground");
+  const surfaces = await listSurfaces(project.project_id);
   return (
-    <StubPage
-      index="02"
-      title="Playground"
-      purpose="Where trust is won. Ask for a rec as any user, on any surface, and see the whole trace — invoke and explain, per-item."
-      rows={[
-        { status: "BUILT", text: "playground/invoke + explain; pipeline reasons per item" },
-        { status: "UX", text: "Three depths of why: chip → contribution bars → full stage trace (default: chip)" },
-        { status: "UX", text: "Weight sliders that re-rank instantly, then “save as surface rule”" },
-        { status: "UX", text: "Side-by-side diff: current config vs proposed — the merchandiser’s safety net" },
-        { status: "BACKEND", text: "Playground has no pipeline case yet; needs ?surface= and a dry-run mode" },
-      ]}
-    />
+    <div className="px-[24px] pb-[36px] pt-[26px]">
+      <PageHeader eyebrow="02 · Serve" title="Playground">
+        The same call your server makes, with the explain record beside it. Requests go through the gateway with
+        the project&apos;s own key, so they are served, logged and attributed exactly like production traffic.
+      </PageHeader>
+      <Playground surfaces={surfaces.map((s) => s.surface_name)} />
+    </div>
   );
 }

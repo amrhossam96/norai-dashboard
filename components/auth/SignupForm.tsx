@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Field } from "@/components/auth/Field";
 import {
   AUTH_OFFLINE,
@@ -14,9 +15,9 @@ import {
 const TIMEOUT_MS = 15_000;
 
 export function SignupForm() {
+  const router = useRouter();
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
-  const [done, setDone] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const inFlight = useRef(false);
 
@@ -54,7 +55,8 @@ export function SignupForm() {
       const result = (await res.json()) as AuthResult;
 
       if (res.ok && result.status === "success") {
-        setDone(result.message);
+        // The session cookie is set; the account is active straight away.
+        router.replace("/onboarding");
         return;
       }
       setFormError(result.message);
@@ -65,17 +67,6 @@ export function SignupForm() {
       inFlight.current = false;
       setPending(false);
     }
-  }
-
-  if (done) {
-    return (
-      <div
-        role="status"
-        className="rounded-[12px] border border-[#2a2a2a] bg-[#161616] px-[14px] py-[12px]"
-      >
-        <p className="text-[13.5px] leading-[1.55] text-[#f2f2f2]">{done}</p>
-      </div>
-    );
   }
 
   return (

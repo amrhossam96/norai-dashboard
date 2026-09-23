@@ -18,40 +18,17 @@ export type AuthState = { status: "idle" } | AuthResult;
 
 export const AUTH_INVALID_CREDENTIALS =
   "That email and password combination doesn't match an account.";
-export const AUTH_INACTIVE_ACCOUNT =
-  "This account hasn't been activated yet. Check your email for the link.";
 export const AUTH_EMAIL_TAKEN = "That email is already registered.";
 export const AUTH_INVALID_INPUT = "Please check the fields and try again.";
 export const AUTH_FAILURE = "Something went wrong on our end. Please try again.";
 export const AUTH_OFFLINE =
   "Couldn't reach us just now. Check your connection and try again.";
-export const AUTH_SIGNUP_SUCCESS =
-  "Account created. Check your email for the activation link.";
-export const AUTH_ACTIVATED = "Your account is active. You can sign in now.";
-export const AUTH_ACTIVATION_INVALID =
-  "This activation link is invalid or has already been used.";
 
 /**
- * Backend limits, mirrored so the browser can reject obvious failures without a
- * round-trip. Source: cmd/api/modules/auth/auth.go —
- *
- *   register  first_name/last_name max=52, email max=255, password min=12 max=72
- *   login     email max=255, password max=128
- *
- * Where the two disagree, the tighter one is mirrored, so a value that passes
- * sign-up can never fail sign-in.
- *
- * These have to be kept honest by hand, and drifting from them is worse than
- * having no check at all: the form accepts a value, the API rejects it, and the
- * only thing the user is told is that some field is wrong. If you change a rule
- * in the Go handler, change it here in the same commit.
+ * Limits shared by the forms and the /api/auth/* handlers, which are the
+ * authority now that accounts live in the dashboard's own table.
  */
 export const EMAIL_MAX = 255;
-/**
- * Twelve, not three. bcrypt cannot rescue a three-character password, and the
- * Go handler stopped accepting them — mirroring the old value here meant the
- * form invited a password the API would refuse.
- */
 export const PASSWORD_MIN = 12;
 export const PASSWORD_MAX = 72;
 export const NAME_MAX = 52;

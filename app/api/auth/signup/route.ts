@@ -1,20 +1,15 @@
 /**
- * Sign-up proxy for POST /v1/auth/user.
+ * Sign-up. Creates the account and signs it in straight away.
  *
- * Registration does NOT create a session. The backend stores the user inactive
- * and emails an activation link (or, with MAIL_TRANSPORT=log, prints it), so
- * there is no token to hold onto yet. The user activates, then signs in.
+ * There is no activation email: the dashboard has no mail transport of its own
+ * and the norai backend has no user model to defer to. Invite-only access is
+ * enforced by the waitlist on the landing page, not here.
  */
-import { apiFetch, NoraiApiError } from "@/lib/api/client";
-import {
-  AUTH_EMAIL_TAKEN,
-  AUTH_FAILURE,
-  AUTH_INVALID_INPUT,
-  AUTH_SIGNUP_SUCCESS,
-  hasErrors,
-  validateSignup,
-  type AuthResult,
-} from "@/lib/auth";
+import { query, isUniqueViolation } from "@/lib/db/pg";
+import { hashSecret } from "@/lib/auth/password";
+import { randomUUID } from "@/lib/crypto";
+import { AUTH_EMAIL_TAKEN, AUTH_FAILURE, AUTH_INVALID_INPUT, hasErrors, validateSignup, type AuthResult } from "@/lib/auth";
+import { createSession } from "@/lib/session";
 
 function reply(result: AuthResult, status: number) {
   return Response.json(result, { status });
@@ -22,41 +17,27 @@ function reply(result: AuthResult, status: number) {
 
 export async function POST(req: Request) {
   const payload = await req.json().catch(() => null);
-  if (payload === null || typeof payload !== "object") {
-    return reply({ status: "error", message: AUTH_INVALID_INPUT }, 400);
-  }
-
+  if (payload === null || typeof payload !== "object") return reply({ status: "error", message: AUTH_INVALID_INPUT }, 400);
   const input = payload as Record<string, unknown>;
-  const errors = validateSignup(input);
-  if (hasErrors(errors)) {
-    // The form validates the same rules before submitting, so reaching here
-    // means a hand-rolled request; one generic message is enough.
-    return reply({ status: "error", message: AUTH_INVALID_INPUT }, 400);
-  }
+  if (hasErrors(validateSignup(input))) return reply({ status: "error", message: AUTH_INVALID_INPUT }, 400);
 
-  const body = {
-    first_name: String(input.first_name).trim(),
-    last_name: String(input.last_name).trim(),
-    // Trim only — case is the database's job (users.email is CITEXT).
-    email: String(input.email).trim(),
-    password: String(input.password),
-  };
-
+  const userId = `usr_${randomUUID()}`;
   try {
-    // 201 Created, body {"data":null}.
-    await apiFetch<null>("/auth/user", { method: "POST", body });
-    return reply({ status: "success", message: AUTH_SIGNUP_SUCCESS }, 200);
+    await query(
+      "INSERT INTO dashboard.users (user_id, email, password_hash, first_name, last_name) VALUES ($1, $2, $3, $4, $5)",
+      [
+        userId,
+        String(input.email).trim(),
+        await hashSecret(String(input.password)),
+        String(input.first_name).trim(),
+        String(input.last_name).trim(),
+      ],
+    );
   } catch (err) {
-    if (err instanceof NoraiApiError && err.status === 400) {
-      // The Go handler collapses "email already registered" and "invalid input
-      // fields" into 400, distinguished only by the message string.
-      const taken = /already registered/i.test(err.message);
-      return reply(
-        { status: "error", message: taken ? AUTH_EMAIL_TAKEN : AUTH_INVALID_INPUT },
-        400,
-      );
-    }
+    if (isUniqueViolation(err)) return reply({ status: "error", message: AUTH_EMAIL_TAKEN }, 400);
     console.error("[auth] signup failed", err);
     return reply({ status: "error", message: AUTH_FAILURE }, 502);
   }
+  await createSession(userId);
+  return reply({ status: "success", message: "" }, 200);
 }

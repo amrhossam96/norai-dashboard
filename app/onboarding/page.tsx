@@ -1,28 +1,19 @@
 import { redirect } from "next/navigation";
 import { Wizard } from "@/components/onboarding/Wizard";
-import { authedFetch, isUnauthorized } from "@/lib/api/server";
-import type { Project } from "@/lib/api/types";
+import { requireUser } from "@/lib/current";
+import { listProjectsFor } from "@/lib/control/projects";
 
 /**
- * First-run setup.
- *
- * Guarded on the same question /app asks, in the opposite direction: this is
- * the screen for someone with no project, so anyone who already has one is
- * sent to the dashboard. That also covers the reload-after-finishing case —
- * the wizard's last step created a project, so coming back here lands on /app
- * rather than offering to set everything up a second time.
+ * First-run setup. Someone who already has a project is sent to the dashboard,
+ * unless they came here on purpose to add another (?new=1).
  */
 export const dynamic = "force-dynamic";
 
-export default async function OnboardingPage() {
-  let projects: Project[];
-  try {
-    projects = (await authedFetch<Project[]>("/projects/")) ?? [];
-  } catch (err) {
-    if (isUnauthorized(err)) redirect("/api/auth/logout?from=onboarding");
-    throw err;
-  }
-  if (projects.length > 0) redirect("/app");
-
-  return <Wizard />;
+export default async function OnboardingPage(props: { searchParams: Promise<{ new?: string }> }) {
+  const { new: wantNew } = await props.searchParams;
+  const user = await requireUser("/onboarding");
+  const projects = await listProjectsFor(user.user_id);
+  if (projects.length > 0 && !wantNew) redirect("/app");
+  const gatewayUrl = process.env.NORAI_PUBLIC_GATEWAY_URL ?? process.env.NORAI_GATEWAY_URL ?? "http://localhost:8080";
+  return <Wizard firstProject={projects.length === 0} gatewayUrl={gatewayUrl} />;
 }

@@ -1,10 +1,32 @@
 import type { Metadata, Viewport } from "next";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/brand";
 import "./globals.css";
 
+/**
+ * Site-wide defaults. `metadataBase` is what lets Next turn the generated
+ * `/opengraph-image` and `/icon.svg` paths into the absolute URLs that
+ * Twitter, Slack and Google require; without it there is no social card at
+ * all and Google falls back to a generic favicon. Pages override `title` and
+ * `description`; openGraph/twitter fall back to those when a page sets none.
+ */
 export const metadata: Metadata = {
-  title: "norai — dashboard",
-  description:
-    "Glassbox recommendations. Every result carries a why. One request, every layer.",
+  metadataBase: new URL(SITE_URL),
+  title: `${SITE_NAME} — dashboard`,
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    url: SITE_URL,
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 /**

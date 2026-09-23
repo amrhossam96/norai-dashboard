@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { navSections } from "@/lib/nav";
-import { mockEnvironment } from "@/lib/mock/pipeline";
 import { NoraiMark } from "@/components/NoraiMark";
 import { UserMenu } from "@/components/shell/UserMenu";
-import type { CurrentUser } from "@/lib/api/types";
+import { ProjectSwitcher } from "@/components/shell/ProjectSwitcher";
+import type { CurrentUser, Project } from "@/lib/api/types";
 
 function Logo() {
   return (
@@ -16,41 +16,27 @@ function Logo() {
         norai
       </span>
       <span className="ml-auto rounded-[4px] border border-line px-[5px] py-[2px] font-mono text-[9.5px] font-medium text-grey-40">
-        v0.9
+        v1
       </span>
     </div>
   );
 }
 
-function EnvSwitcher() {
-  return (
-    <div className="px-[14px] pb-[14px]">
-      <button className="w-full cursor-pointer rounded-[8px] border border-line bg-surface px-[11px] py-[10px] text-left shadow-[0_1px_2px_rgba(15,15,15,0.04)] transition-colors hover:border-grey-85">
-        <div className="eyebrow">Environment</div>
-        <div className="mt-[6px] flex items-center gap-[7px]">
-          <span className="h-[6px] w-[6px] rounded-full bg-red" />
-          <span className="flex-1 font-sans text-[13px] font-semibold text-ink">
-            {mockEnvironment.team
-              ? `${mockEnvironment.team} / ${mockEnvironment.name}`
-              : mockEnvironment.name}
-          </span>
-          <span className="font-mono text-[10px] text-grey-65">⌄</span>
-        </div>
-        <div className="mt-[5px] font-mono text-[9.5px] text-grey-60">
-          {mockEnvironment.id} · scopes everything
-        </div>
-      </button>
-    </div>
-  );
-}
-
-export function Sidebar({ user }: { user: CurrentUser | null }) {
+export function Sidebar({
+  user,
+  project,
+  projects,
+}: {
+  user: CurrentUser | null;
+  project: Project;
+  projects: Project[];
+}) {
   const pathname = usePathname();
 
   return (
     <aside className="flex h-screen w-[236px] flex-none flex-col border-r border-line bg-surface">
       <Logo />
-      <EnvSwitcher />
+      <ProjectSwitcher project={project} projects={projects} />
 
       <nav className="no-scrollbar flex flex-1 flex-col gap-[2px] overflow-y-auto px-[14px]">
         {navSections.map((section, si) => (
@@ -86,11 +72,6 @@ export function Sidebar({ user }: { user: CurrentUser | null }) {
                     </span>
                   )}
                   {item.label}
-                  {item.badge && (
-                    <span className="ml-auto font-mono text-[9.5px] font-medium text-grey-40">
-                      {item.badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}

@@ -1,12 +1,11 @@
 /**
- * Sidebar navigation, matching direction 2a. SERVE items carry a mono 01–04
- * index; INSPECT/SETTINGS are unnumbered. `badge` renders the small "live" tag.
+ * Sidebar navigation. SERVE items carry a mono 01–04 index; INSPECT/SETTINGS
+ * are unnumbered.
  */
 export interface NavItem {
   label: string;
   href: string;
-  index?: string; // "01".."04" for the SERVE group
-  badge?: string; // e.g. "live"
+  index?: string;
 }
 
 export interface NavSection {
@@ -18,7 +17,7 @@ export const navSections: NavSection[] = [
   {
     title: "Serve",
     items: [
-      { label: "Pipeline", href: "/app", index: "01" },
+      { label: "Overview", href: "/app", index: "01" },
       { label: "Playground", href: "/app/playground", index: "02" },
       { label: "Surfaces", href: "/app/surfaces", index: "03" },
       { label: "Catalog", href: "/app/catalog", index: "04" },
@@ -27,14 +26,14 @@ export const navSections: NavSection[] = [
   {
     title: "Inspect",
     items: [
-      { label: "Users & identity", href: "/app/users" },
-      { label: "Event types", href: "/app/events" },
-      { label: "Diagnostics", href: "/app/diagnostics" },
+      { label: "Users", href: "/app/users" },
+      { label: "Readiness", href: "/app/diagnostics" },
     ],
   },
   {
     title: "Settings",
     items: [
+      { label: "Configuration", href: "/app/config" },
       { label: "API keys", href: "/app/api-keys" },
       { label: "Team & audit log", href: "/app/team" },
     ],

@@ -1,82 +1,40 @@
 /**
- * Project creation.
- *
- * Two calls to the API, not one: POST /v1/projects/ needs a team_id, and the
- * browser has no idea which team the user belongs to. The team was provisioned
- * for them at activation (users.Service.Activate -> EnsurePersonalWorkspaceIfNone),
- * so it is looked up here rather than being asked for in the form.
- *
- * The project's default "Production" environment is created by the backend in
- * the same transaction, so nothing more is needed to get a usable workspace.
+ * POST: register a project (the dashboard's equivalent of `norai projects create`)
+ * and make it the current one. PUT: switch the current project.
  */
-import { NoraiApiError } from "@/lib/api/client";
-import { authedFetch, isUnauthorized } from "@/lib/api/server";
-import type {
-  CreateProjectRequest,
-  Project,
-  TeamWithRole,
-} from "@/lib/api/types";
-import {
-  PROJECT_CREATE_FAILED,
-  PROJECT_NO_TEAM,
-  slugifyProjectName,
-  validateProjectName,
-  type ProjectResult,
-} from "@/lib/projects";
+import { getSessionUser, setProjectCookie } from "@/lib/session";
+import { createProject, getProjectFor } from "@/lib/control/projects";
+import { PROJECT_CREATE_FAILED, validateProjectName, type ProjectResult } from "@/lib/projects";
 
 function reply(result: ProjectResult, status: number) {
   return Response.json(result, { status });
 }
 
 export async function POST(req: Request) {
-  const payload = await req.json().catch(() => null);
-  if (payload === null || typeof payload !== "object") {
-    return reply({ status: "error", message: PROJECT_CREATE_FAILED }, 400);
-  }
-
-  const name = String((payload as Record<string, unknown>).name ?? "").trim();
+  const user = await getSessionUser();
+  if (!user) return reply({ status: "error", message: "Your session expired." }, 401);
+  const payload = (await req.json().catch(() => null)) as { name?: unknown } | null;
+  const name = String(payload?.name ?? "").trim();
   const invalid = validateProjectName(name);
-  if (invalid) {
-    return reply({ status: "error", message: invalid }, 400);
-  }
-
+  if (invalid) return reply({ status: "error", message: invalid }, 400);
   try {
-    const teams = await authedFetch<TeamWithRole[]>("/teams");
-    const team = teams?.[0];
-    if (!team) {
-      // Only reachable if provisioning failed at activation, which the backend
-      // logs but does not treat as fatal.
-      console.error("[projects] user has no team");
-      return reply({ status: "error", message: PROJECT_NO_TEAM }, 409);
-    }
-
-    const body: CreateProjectRequest = {
-      name,
-      slug: slugifyProjectName(name),
-      description: "",
-      team_id: team.id,
-    };
-
-    const project = await authedFetch<Project>("/projects/", {
-      method: "POST",
-      body,
-    });
-
-    return reply(
-      { status: "success", message: "", projectId: project.id },
-      200,
-    );
+    const project = await createProject(user.user_id, name);
+    await setProjectCookie(project.project_id);
+    return reply({ status: "success", message: "", projectId: project.project_id }, 200);
   } catch (err) {
-    if (isUnauthorized(err)) {
-      return reply({ status: "error", message: "Your session expired." }, 401);
-    }
-    if (err instanceof NoraiApiError && err.status === 409) {
-      return reply(
-        { status: "error", message: "A project with that name already exists." },
-        409,
-      );
-    }
     console.error("[projects] create failed", err);
-    return reply({ status: "error", message: PROJECT_CREATE_FAILED }, 502);
+    const msg = err instanceof Error && /DASHBOARD_SECRET/.test(err.message) ? err.message : PROJECT_CREATE_FAILED;
+    return reply({ status: "error", message: msg }, 502);
   }
+}
+
+export async function PUT(req: Request) {
+  const user = await getSessionUser();
+  if (!user) return reply({ status: "error", message: "Your session expired." }, 401);
+  const payload = (await req.json().catch(() => null)) as { projectId?: unknown } | null;
+  const id = String(payload?.projectId ?? "");
+  const project = await getProjectFor(user.user_id, id);
+  if (!project) return reply({ status: "error", message: "Not one of your projects." }, 404);
+  await setProjectCookie(project.project_id);
+  return reply({ status: "success", message: "", projectId: project.project_id }, 200);
 }

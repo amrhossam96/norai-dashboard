@@ -1,75 +1,89 @@
 import "server-only";
 
 import { cookies } from "next/headers";
+import { query, queryOne } from "@/lib/db/pg";
+import { randomToken, sha256Hex } from "@/lib/crypto";
 
 /**
- * Session storage for the dashboard.
+ * Dashboard sessions.
  *
- * The Go API is stateless: POST /v1/auth/token returns a 7-day HS256 JWT and
- * AuthTokenMiddleware expects it back as `Authorization: Bearer <token>`. There
- * is no session cookie on the backend, so the browser has to hold that string
- * somewhere.
- *
- * It is held in an httpOnly cookie rather than localStorage. localStorage is
- * readable by any script on the page, so a single XSS — in our code or in a
- * dependency — walks off with a credential that stays valid for a week. An
- * httpOnly cookie is invisible to JavaScript; only the server reads it, adds
- * the Bearer header, and calls Go. The backend needs no changes for this.
- *
- * `import "server-only"` makes importing this from a client component a build
- * error rather than a leaked token.
+ * The norai backend has no human users: every /v1 call is authenticated by a
+ * project API key. Sign-in is therefore the dashboard's own concern. A session
+ * is a random token in an httpOnly cookie; only its SHA-256 is stored, so a
+ * database read cannot be replayed as a cookie. Sign-out deletes the row, which
+ * is real revocation.
  */
-
 export const SESSION_COOKIE = "norai_session";
+export const PROJECT_COOKIE = "norai_project";
 
-/**
- * Matches the backend's JWT_TOKEN_EXP (168h). Kept slightly under the token's
- * own lifetime so the cookie disappears before the token it carries goes stale,
- * rather than the browser sending a credential the API will reject.
- */
-const SESSION_MAX_AGE = 7 * 24 * 60 * 60 - 60; // 7 days minus a minute
+const SESSION_MAX_AGE = 7 * 24 * 60 * 60; // seconds
 
 function cookieOptions() {
   return {
     httpOnly: true,
-    // Secure breaks plain-HTTP localhost, so it follows the deployment.
     secure: process.env.NODE_ENV === "production",
-    // "lax" still sends the cookie on top-level navigation into the dashboard
-    // (e.g. the activation link in an email) while blocking cross-site POSTs.
     sameSite: "lax" as const,
     path: "/",
   };
 }
 
-export async function createSession(token: string): Promise<void> {
+export interface SessionUser {
+  user_id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+}
+
+export async function createSession(userId: string): Promise<void> {
+  const token = randomToken();
+  const expires = new Date(Date.now() + SESSION_MAX_AGE * 1000);
+  await query(
+    "INSERT INTO dashboard.sessions (token_hash, user_id, expires_at) VALUES ($1, $2, $3)",
+    [sha256Hex(token), userId, expires],
+  );
   const store = await cookies();
-  store.set(SESSION_COOKIE, token, {
-    ...cookieOptions(),
-    maxAge: SESSION_MAX_AGE,
-  });
+  store.set(SESSION_COOKIE, token, { ...cookieOptions(), maxAge: SESSION_MAX_AGE });
 }
 
 export async function destroySession(): Promise<void> {
   const store = await cookies();
-  // Delete by overwriting with an expired value: a bare delete() can miss when
-  // the attributes do not match the ones the cookie was written with.
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (token) {
+    await query("DELETE FROM dashboard.sessions WHERE token_hash = $1", [sha256Hex(token)]).catch(
+      (err) => console.error("[session] delete failed", err),
+    );
+  }
   store.set(SESSION_COOKIE, "", { ...cookieOptions(), maxAge: 0 });
+  store.set(PROJECT_COOKIE, "", { ...cookieOptions(), maxAge: 0 });
 }
 
-/** The raw JWT, or null when signed out. Server-side only. */
-export async function getSessionToken(): Promise<string | null> {
-  const store = await cookies();
-  return store.get(SESSION_COOKIE)?.value ?? null;
-}
-
-/**
- * Whether a session cookie is present.
- *
- * This is a presence check, not a validation: the signature is verified by the
- * Go API on every call. Treat it as "show the dashboard shell", never as
- * "this user is authorised" — authorisation is the backend's answer, and a 401
- * from it is the real source of truth.
- */
+/** Presence check only; use getSessionUser() for the authoritative answer. */
 export async function hasSession(): Promise<boolean> {
-  return (await getSessionToken()) !== null;
+  const store = await cookies();
+  return Boolean(store.get(SESSION_COOKIE)?.value);
+}
+
+/** The signed-in user, or null when the cookie is missing, unknown or expired. */
+export async function getSessionUser(): Promise<SessionUser | null> {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE)?.value;
+  if (!token) return null;
+  return queryOne<SessionUser>(
+    `SELECT u.user_id, u.email, u.first_name, u.last_name, u.created_at
+       FROM dashboard.sessions s JOIN dashboard.users u USING (user_id)
+      WHERE s.token_hash = $1 AND s.expires_at > now()`,
+    [sha256Hex(token)],
+  );
+}
+
+/** Which project the shell is looking at; validated against membership by the caller. */
+export async function getProjectCookie(): Promise<string | null> {
+  const store = await cookies();
+  return store.get(PROJECT_COOKIE)?.value ?? null;
+}
+
+export async function setProjectCookie(projectId: string): Promise<void> {
+  const store = await cookies();
+  store.set(PROJECT_COOKIE, projectId, { ...cookieOptions(), httpOnly: false, maxAge: 365 * 24 * 60 * 60 });
 }

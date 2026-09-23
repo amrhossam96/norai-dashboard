@@ -1,11 +1,10 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { mockEnvironment } from "@/lib/mock/pipeline";
 import { navSections } from "@/lib/nav";
 
 function pageLabel(pathname: string): string {
-  if (pathname === "/app") return "pipeline";
+  if (pathname === "/app") return "overview";
   const all = navSections.flatMap((s) => s.items);
   const match = all.find(
     (i) => i.href !== "/app" && pathname.startsWith(i.href),
@@ -27,33 +26,27 @@ function Crumb({ children, muted }: { children: string; muted?: boolean }) {
   );
 }
 
-export function Topbar() {
+export function Topbar({ projectName, gatewayVersion }: { projectName: string; gatewayVersion: string | null }) {
   const pathname = usePathname();
   const sep = <span className="font-mono text-[12px] text-grey-85">/</span>;
 
   return (
     <header className="flex items-center gap-[14px] border-b border-line bg-surface px-[24px] py-[13px]">
-      {mockEnvironment.team && (
-        <>
-          <Crumb muted>{mockEnvironment.team}</Crumb>
-          {sep}
-        </>
-      )}
-      <Crumb>{mockEnvironment.name}</Crumb>
+      <Crumb>{projectName}</Crumb>
       {sep}
       <Crumb>{pageLabel(pathname)}</Crumb>
 
       <div className="ml-auto flex items-center gap-[10px]">
-        <button className="flex items-center gap-[26px] rounded-[7px] border border-line bg-shell px-[10px] py-[6px] transition-colors hover:border-grey-85">
-          <span className="font-sans text-[12px] text-grey-60">
-            Search users, entities, events
+        <span className="flex items-center gap-[7px] rounded-[7px] border border-line bg-shell px-[10px] py-[6px]">
+          <span className={`h-[6px] w-[6px] rounded-full ${gatewayVersion ? "bg-grey-40" : "bg-red"}`} />
+          <span className="font-mono text-[10.5px] text-grey-60">
+            {gatewayVersion ? `gateway ${gatewayVersion}` : "gateway unreachable"}
           </span>
-          <span className="font-mono text-[10px] font-medium text-grey-60">
-            ⌘K
-          </span>
-        </button>
+        </span>
         <a
-          href="#"
+          href="https://github.com/amrhossam96/norai/blob/main/docs/SPEC.md"
+          target="_blank"
+          rel="noreferrer"
           className="font-sans text-[12.5px] text-ink-3 transition-colors hover:text-ink"
         >
           Docs
